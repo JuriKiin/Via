@@ -4,7 +4,7 @@ A local web tool for narrowing down which commits may have caused an issue. Poin
 
 Useful when you know an issue started within a time window and want to find the impacting change without digging through `git log` in the terminal.
 
-<video src="https://github.com/JuriKiin/CommitFinder/raw/main/Demo.mp4" width="100%"></video>
+<video src="https://github.com/JuriKiin/CommitFinder/Demo.mp4" width="100%"></video>
 
 ## Quick Start
 
