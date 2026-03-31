@@ -1310,15 +1310,27 @@ async function toggleBranchDropdown() {
 
 async function selectBranch(branch) {
     const dropdown = document.getElementById("branch-dropdown");
-    dropdown.style.display = "none";
+    if (dropdown) dropdown.style.display = "none";
     branchDropdownOpen = false;
 
-    const result = await window.via.checkoutBranch(repoPath, branch);
+    let result = await window.via.checkoutBranch(repoPath, branch);
+
+    if (!result.ok && result.error && result.error.includes("overwritten")) {
+        if (confirm(`Your local changes conflict with '${branch}'.\nDo you want to stash, switch, and apply them?`)) {
+            result = await window.via.checkoutBranch(repoPath, branch, true);
+        } else {
+            return;
+        }
+    }
+
     if (result.ok) {
         document.getElementById("current-branch").textContent = branch;
         refreshBranchDiff();
+        if (result.conflicts) {
+            alert("Branch switched successfully, but there were merge conflicts applying your changes.\\nPlease resolve them in the diff panel.");
+        }
     } else {
-        alert(`Failed to checkout branch: ${result.error} `);
+        alert(`Failed to checkout branch: ${result.error}`);
     }
 }
 

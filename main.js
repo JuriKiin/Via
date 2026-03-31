@@ -350,13 +350,31 @@ ipcMain.handle("list-branches", async (_e, repoPath) => {
   return { branches, current };
 });
 
-ipcMain.handle("checkout-branch", async (_e, repoPath, branch) => {
+ipcMain.handle("checkout-branch", async (_e, repoPath, branch, forceBringChanges) => {
   const { valid, path: resolved } = await isGitRepo(repoPath);
   if (!valid) return { ok: false, error: "Invalid repository" };
 
-  const result = await runGit(resolved, ["checkout", branch]);
-  if (result.returncode !== 0) return { ok: false, error: result.stderr };
-  return { ok: true };
+  if (forceBringChanges) {
+    const stashRes = await runGit(resolved, ["stash", "push", "-m", "via_auto_checkout_stash"]);
+    const result = await runGit(resolved, ["checkout", branch]);
+    if (result.returncode !== 0) {
+      if (stashRes.stdout.includes("Saved working directory")) {
+        await runGit(resolved, ["stash", "pop"]); // Revert stash if switch failed
+      }
+      return { ok: false, error: result.stderr };
+    }
+    if (stashRes.stdout.includes("Saved working directory")) {
+      const popRes = await runGit(resolved, ["stash", "pop"]);
+      if (popRes.returncode !== 0 && (popRes.stderr.includes("conflict") || popRes.stdout.includes("conflict"))) {
+        return { ok: true, conflicts: true };
+      }
+    }
+    return { ok: true };
+  } else {
+    const result = await runGit(resolved, ["checkout", branch]);
+    if (result.returncode !== 0) return { ok: false, error: result.stderr };
+    return { ok: true };
+  }
 });
 
 ipcMain.handle("discard-file", async (_e, repoPath, file, statusCode) => {
