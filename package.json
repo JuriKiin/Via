@@ -1,0 +1,53 @@
+{
+  "name": "via",
+  "version": "1.0.0",
+  "description": "A lightweight git UI with an embedded terminal",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:dir": "electron-builder --mac --dir",
+    "rebuild-pty": "electron-rebuild -f -w node-pty",
+    "postinstall": "bash scripts/patch-electron.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JuriKiin/Via.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "electron": "^41.1.0",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9"
+  },
+  "build": {
+    "appId": "com.via.gitui",
+    "productName": "Via",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "dir"
+      ],
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "title": "Via",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "build/icon.icns",
+      "node_modules/**/*"
+    ]
+  }
+}

@@ -1,36 +1,63 @@
-# GitFinder
+# Via
 
-A local web tool for narrowing down which commits may have caused an issue. Point it at a git repo, pick some files, set a date range, and see every commit that touched those files — with syntax-highlighted diffs.
+A lightweight git UI with an embedded terminal. Via acts as a bridge for people who normally use UI tools for git but want to become more terminal-friendly — while keeping helpful visual tools like side-by-side diffs.
 
-Useful when you know an issue started within a time window and want to find the impacting change without digging through `git log` in the terminal.
+## Features
 
-https://github.com/user-attachments/assets/6047cb03-3f4b-4e93-b42d-f77619872f1f
+- **Embedded terminal** — Full PTY shell that opens in your repo directory, with multiple tabs and per-repo sessions
+- **Real-time diff panel** — See your uncommitted changes update live, with collapsible file sections and unified/split view
+- **Discard changes** — Discard all changes or individual files directly from the diff panel
+- **Search Commits** — Find commits that touched specific files in a date range, with syntax-highlighted diffs
+- **Branch switching** — View and switch branches from the sidebar
+- **Git Reference** — Built-in cheat sheet of common git commands
+- **Customizable themes** — Choose from built-in presets or create your own with custom color schemes
+- **Native macOS app** — Built with Electron, native folder picker, custom icon
 
-## Quick Start
+## Install from DMG
+
+1. Download the latest `.dmg` from [Releases](https://github.com/JuriKiin/Via/releases)
+2. Open the `.dmg` and drag **Via** to your Applications folder
+3. Launch Via from Applications
+
+## Build from Source
+
+Requires [Node.js](https://nodejs.org/) (v18+) and git.
 
 ```bash
-git clone <repo-url> && cd GitFinder
-chmod +x run.sh
-./run.sh
+# Clone the repo
+git clone https://github.com/JuriKiin/Via.git
+cd Via
+
+# Install dependencies
+npm install
+
+# Build the .dmg and .app
+npm run build
 ```
 
-That's it. The script creates a Python virtual environment, installs Flask, and opens the app in your browser at `http://localhost:5050`.
+The built `Via.dmg` (installer) and `Via.app` will be in `dist/`.
 
-## Requirements
+To run the `.app` directly:
 
-- Python 3.9+
-- Git
+```bash
+open dist/mac-*/Via.app
+```
 
-No other dependencies. Flask is installed automatically into a local `.venv`.
+## Development
 
-## Usage
+```bash
+npm install
+npm start
+```
 
-1. **Add a repository** — click "+ Add repository" and paste the path to a local git repo. Saved repos persist across sessions via localStorage.
-2. **Search files** — type a filename fragment to get autocomplete suggestions. Select one or more files.
-3. **Set a date range** — pick the start and end dates for the window you want to investigate.
-4. **Search** — click "Search Commits" to see all commits that touched your selected files in that window.
-5. **Inspect a commit** — click any commit to see the full diff with syntax highlighting. If the repo has a GitHub remote, a "View on GitHub" link is included.
+This runs Electron directly for fast iteration. The dock icon will show "Electron" instead of "Via" in dev mode — this is normal.
 
-## Sharing with coworkers
+## Keyboard Shortcuts
 
-Clone the repo and run `./run.sh`. That's the entire setup — no Node, no build step, no global installs.
+| Shortcut | Action |
+|----------|--------|
+| `Cmd+M` | Toggle sidebar |
+| `Cmd+T` | Open terminal |
+| `Cmd+N` | New terminal tab |
+| `Cmd+F` | Search commits |
+| `Cmd+P` | Open repository |

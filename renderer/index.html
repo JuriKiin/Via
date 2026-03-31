@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self';">
+    <title>Via</title>
+    <link rel="stylesheet" href="css/xterm.css">
+    <link rel="stylesheet" href="css/diff2html.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Thin drag bar at the very top for window dragging -->
+    <div class="drag-bar"></div>
+
+    <div class="app-layout">
+        <!-- Collapsed sidebar expand button -->
+        <div class="sidebar-collapsed-bar" id="sidebar-collapsed-bar" onclick="toggleSidebar()">
+            <span class="sidebar-expand-arrow">&#9656;</span>
+        </div>
+
+        <!-- Left Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
+
+            <!-- Repositories -->
+            <div class="sidebar-section" style="padding-top:36px;">
+                <div class="sidebar-section-header">
+                    <span>Repositories</span>
+                    <button class="icon-btn" onclick="browseForRepo()" title="Add repository">+</button>
+                </div>
+                <div id="saved-repos" class="repo-list"></div>
+            </div>
+
+            <!-- Tools -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-header">
+                    <span>Tools</span>
+                </div>
+                <div class="tool-list">
+                    <button class="tool-item active" onclick="openTool('terminal')" id="tool-terminal">
+                        <span class="tool-icon">&gt;_</span>
+                        <span>Terminal</span>
+                    </button>
+                    <button class="tool-item" onclick="openTool('commit-finder')" id="tool-commit-finder">
+                        <span class="tool-icon">&#128269;</span>
+                        <span>Search Commits</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Spacer to push branch to bottom -->
+            <div class="sidebar-spacer"></div>
+
+            <!-- Sidebar collapse hint -->
+            <div class="sidebar-shortcut-hint">
+                <kbd>Cmd+M</kbd> toggle sidebar
+            </div>
+
+            <!-- Branch Info (pinned to bottom) -->
+            <div class="sidebar-section sidebar-branch" id="branch-info" style="display:none;">
+                <div class="sidebar-section-header">
+                    <span>Branch</span>
+                </div>
+                <div class="branch-selector" id="branch-selector">
+                    <div id="current-branch" class="branch-name" onclick="toggleBranchDropdown()"></div>
+                    <div id="branch-dropdown" class="branch-dropdown" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Info & Settings -->
+            <div class="sidebar-section sidebar-settings">
+                <button class="tool-item" onclick="openTool('git-reference')" id="tool-git-reference">
+                    <span class="tool-icon">?</span>
+                    <span>Git Reference</span>
+                </button>
+                <button class="tool-item" onclick="openTool('preferences')" id="tool-preferences">
+                    <span class="tool-icon">&#9881;</span>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Terminal Panel -->
+            <div class="terminal-panel" id="terminal-panel">
+                <div class="panel-header" id="terminal-header">
+                    <div class="terminal-tabs" id="terminal-tabs"></div>
+                    <div class="panel-actions">
+                        <button class="icon-btn" onclick="addTerminalTab()" title="New terminal">+</button>
+                        <button class="icon-btn" onclick="restartTerminal()" title="Restart terminal">&#8635;</button>
+                    </div>
+                </div>
+                <div id="terminal-container"></div>
+            </div>
+
+            <!-- Tool Overlay (Search Commits) -->
+            <div class="tool-overlay" id="tool-overlay" style="display:none;">
+                <div class="tool-overlay-header">
+                    <span class="panel-title" id="tool-overlay-title">Search Commits</span>
+                    <button class="icon-btn" onclick="closeTool()">&times;</button>
+                </div>
+                <div class="tool-overlay-content" id="tool-overlay-content">
+                    <div id="search-commits-view">
+                        <section class="tool-card" id="cf-file-section">
+                            <label for="cf-file-input">Files to search</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="cf-file-input" placeholder="Type to search files..." autocomplete="off">
+                                <div id="cf-file-dropdown" class="dropdown"></div>
+                            </div>
+                            <div id="cf-file-chips" class="chips"></div>
+                        </section>
+
+                        <section class="tool-card">
+                            <label>Date Range</label>
+                            <div class="quick-filters">
+                                <button class="quick-filter" onclick="applyQuickFilter(1)">24h</button>
+                                <button class="quick-filter" onclick="applyQuickFilter(3)">3d</button>
+                                <button class="quick-filter" onclick="applyQuickFilter(7)">1w</button>
+                                <button class="quick-filter" onclick="applyQuickFilter(14)">2w</button>
+                                <button class="quick-filter" onclick="applyQuickFilter(30)">1m</button>
+                                <button class="quick-filter" onclick="applyQuickFilter(90)">3m</button>
+                            </div>
+                            <div class="date-row">
+                                <div class="date-field">
+                                    <label for="cf-start-date" class="small-label">From</label>
+                                    <input type="date" id="cf-start-date">
+                                </div>
+                                <div class="date-field">
+                                    <label for="cf-end-date" class="small-label">To</label>
+                                    <input type="date" id="cf-end-date">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section>
+                            <button class="primary-btn" onclick="cfSearch()">Search Commits</button>
+                        </section>
+
+                        <section id="cf-results" style="display:none;">
+                            <h3 id="cf-results-heading"></h3>
+                            <div id="cf-results-list"></div>
+                        </section>
+
+                        <div id="cf-detail" style="display:none;">
+                            <button class="back-btn" onclick="cfBackToResults()">&larr; Back to results</button>
+                            <div class="detail-header">
+                                <h3 id="cf-detail-message"></h3>
+                                <div class="detail-meta">
+                                    <span id="cf-detail-hash" class="mono"></span>
+                                    <span id="cf-detail-author"></span>
+                                    <span id="cf-detail-date"></span>
+                                </div>
+                                <a id="cf-detail-github-link" class="github-btn" href="#" target="_blank" rel="noopener" style="display:none;">View on GitHub</a>
+                            </div>
+                            <div class="diff-controls">
+                                <span>View:</span>
+                                <button class="toggle-btn active" data-mode="line-by-line" onclick="cfSwitchDiffMode('line-by-line', this)">Unified</button>
+                                <button class="toggle-btn" data-mode="side-by-side" onclick="cfSwitchDiffMode('side-by-side', this)">Split</button>
+                            </div>
+                            <div id="cf-detail-diff" class="diff-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Git Reference Overlay -->
+            <div class="tool-overlay" id="git-reference-overlay" style="display:none;">
+                <div class="tool-overlay-header">
+                    <span class="panel-title">Git Reference</span>
+                    <button class="icon-btn" onclick="closeTool()">&times;</button>
+                </div>
+                <div class="tool-overlay-content git-reference">
+                    <p class="git-ref-intro">A quick reference for common git commands. Try them out in the terminal!</p>
+
+                    <div class="tool-card">
+                        <label>Getting Started</label>
+                        <div class="git-cmd"><code>git init</code><span>Create a new repository in the current directory</span></div>
+                        <div class="git-cmd"><code>git clone &lt;url&gt;</code><span>Download a repository from a remote URL</span></div>
+                        <div class="git-cmd"><code>git status</code><span>Show which files are changed, staged, or untracked</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Staging &amp; Committing</label>
+                        <div class="git-cmd"><code>git add &lt;file&gt;</code><span>Stage a specific file for commit</span></div>
+                        <div class="git-cmd"><code>git add .</code><span>Stage all changes in the current directory</span></div>
+                        <div class="git-cmd"><code>git commit -m "message"</code><span>Commit staged changes with a message</span></div>
+                        <div class="git-cmd"><code>git commit --amend</code><span>Edit the last commit (message or contents)</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Branches</label>
+                        <div class="git-cmd"><code>git branch</code><span>List all local branches</span></div>
+                        <div class="git-cmd"><code>git branch &lt;name&gt;</code><span>Create a new branch</span></div>
+                        <div class="git-cmd"><code>git checkout &lt;branch&gt;</code><span>Switch to a branch</span></div>
+                        <div class="git-cmd"><code>git checkout -b &lt;name&gt;</code><span>Create and switch to a new branch</span></div>
+                        <div class="git-cmd"><code>git merge &lt;branch&gt;</code><span>Merge another branch into the current one</span></div>
+                        <div class="git-cmd"><code>git branch -d &lt;name&gt;</code><span>Delete a branch (safe — won't delete unmerged)</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Remote &amp; Syncing</label>
+                        <div class="git-cmd"><code>git remote -v</code><span>Show configured remotes</span></div>
+                        <div class="git-cmd"><code>git fetch</code><span>Download changes from remote without merging</span></div>
+                        <div class="git-cmd"><code>git pull</code><span>Fetch and merge remote changes into current branch</span></div>
+                        <div class="git-cmd"><code>git push</code><span>Upload local commits to the remote</span></div>
+                        <div class="git-cmd"><code>git push -u origin &lt;branch&gt;</code><span>Push a new branch and set it to track remote</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Inspecting History</label>
+                        <div class="git-cmd"><code>git log --oneline</code><span>Compact list of recent commits</span></div>
+                        <div class="git-cmd"><code>git log --graph --oneline</code><span>Visual branch history in the terminal</span></div>
+                        <div class="git-cmd"><code>git diff</code><span>Show unstaged changes</span></div>
+                        <div class="git-cmd"><code>git diff --cached</code><span>Show staged changes (what will be committed)</span></div>
+                        <div class="git-cmd"><code>git show &lt;commit&gt;</code><span>Show details and diff for a specific commit</span></div>
+                        <div class="git-cmd"><code>git blame &lt;file&gt;</code><span>Show who last changed each line of a file</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Undoing Things</label>
+                        <div class="git-cmd"><code>git checkout -- &lt;file&gt;</code><span>Discard changes to a file (restore to last commit)</span></div>
+                        <div class="git-cmd"><code>git reset HEAD &lt;file&gt;</code><span>Unstage a file (keep the changes)</span></div>
+                        <div class="git-cmd"><code>git reset --soft HEAD~1</code><span>Undo last commit but keep changes staged</span></div>
+                        <div class="git-cmd"><code>git reset --hard HEAD~1</code><span>Undo last commit and discard changes (careful!)</span></div>
+                        <div class="git-cmd"><code>git revert &lt;commit&gt;</code><span>Create a new commit that undoes a previous one</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Stashing</label>
+                        <div class="git-cmd"><code>git stash</code><span>Temporarily save uncommitted changes</span></div>
+                        <div class="git-cmd"><code>git stash pop</code><span>Restore the most recent stash and remove it</span></div>
+                        <div class="git-cmd"><code>git stash list</code><span>List all saved stashes</span></div>
+                        <div class="git-cmd"><code>git stash drop</code><span>Delete the most recent stash</span></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Useful Shortcuts</label>
+                        <div class="git-cmd"><code>git log --oneline -10</code><span>Show last 10 commits</span></div>
+                        <div class="git-cmd"><code>git diff --stat</code><span>Summary of changes (files and line counts)</span></div>
+                        <div class="git-cmd"><code>git log --author="name"</code><span>Filter commits by author</span></div>
+                        <div class="git-cmd"><code>git log -- &lt;file&gt;</code><span>Show commit history for a specific file</span></div>
+                        <div class="git-cmd"><code>git cherry-pick &lt;commit&gt;</code><span>Apply a specific commit to the current branch</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences Overlay -->
+            <div class="tool-overlay" id="preferences-overlay" style="display:none;">
+                <div class="tool-overlay-header">
+                    <span class="panel-title">Settings</span>
+                    <button class="icon-btn" onclick="closeTool()">&times;</button>
+                </div>
+                <div class="tool-overlay-content">
+                    <div class="tool-card">
+                        <label>Presets</label>
+                        <div id="theme-presets" class="preset-list"></div>
+                    </div>
+
+                    <div class="tool-card">
+                        <label>Custom Theme</label>
+                        <p class="prefs-description">Paste a comma-separated list of hex colors to customize the theme. Order: background, surface, surface-alt, text, text-secondary, border, accent, accent-hover, success, error, warning</p>
+                        <div class="prefs-theme-input-row">
+                            <input type="text" id="theme-input" placeholder="#1a1a2e,#16213e,#0f3460,#e4e4e7,#9ca3af,#2a2a4a,#0ea5e9,#38bdf8,#34d399,#f87171,#fbbf24" autocomplete="off">
+                            <button class="primary-btn prefs-apply-btn" onclick="applyThemeFromInput()">Apply</button>
+                        </div>
+                        <div id="theme-status" class="status" style="margin-top:8px;"></div>
+
+                        <div class="prefs-swatches" id="theme-swatches"></div>
+
+                        <div class="prefs-actions">
+                            <button class="toggle-btn" onclick="resetTheme()">Reset to Default</button>
+                            <button class="toggle-btn" onclick="copyCurrentTheme()">Copy Current Theme</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Resize handle -->
+        <div class="resize-handle" id="resize-handle"></div>
+
+        <!-- Right Panel: Diff Viewer -->
+        <aside class="diff-panel" id="diff-panel">
+            <div class="panel-header">
+                <span class="panel-title">Changes</span>
+                <div class="panel-actions">
+                    <button class="toggle-btn small danger" id="discard-all-btn" onclick="discardAllChanges()" title="Discard all changes">Discard All</button>
+                    <button class="toggle-btn small" id="collapse-all-btn" onclick="toggleCollapseAll()">Collapse All</button>
+                    <button class="toggle-btn small active" id="diff-mode-unified" onclick="switchBranchDiffMode('line-by-line')">Unified</button>
+                    <button class="toggle-btn small" id="diff-mode-split" onclick="switchBranchDiffMode('side-by-side')">Split</button>
+                    <button class="icon-btn" onclick="refreshBranchDiff(true)" title="Refresh">&#8635;</button>
+                </div>
+            </div>
+            <div id="diff-status" class="diff-status"></div>
+            <div id="branch-diff-container" class="diff-scroll">
+                <div class="empty-state">Select a repository to see changes</div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Context menu for diff file headers -->
+    <div class="diff-context-menu" id="diff-context-menu" style="display:none;">
+        <div class="diff-context-menu-item danger" id="diff-context-discard">Discard Changes</div>
+    </div>
+
+    <script src="js/xterm.js"></script>
+    <script src="js/xterm-addon-fit.js"></script>
+    <script src="js/diff2html-ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

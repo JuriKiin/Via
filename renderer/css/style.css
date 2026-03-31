@@ -1,0 +1,1427 @@
+/* ── CSS Variables ─────────────────────────────────────────────────────────── */
+:root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface-alt: #0f3460;
+    --text: #e4e4e7;
+    --text-secondary: #9ca3af;
+    --border: #2a2a4a;
+    --accent: #0ea5e9;
+    --accent-hover: #38bdf8;
+    --success: #34d399;
+    --error: #f87171;
+    --warning: #fbbf24;
+    --chip-bg: #2a2a4a;
+    --hover-bg: #1e2a4a;
+    --mono: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --sidebar-width: 260px;
+    --diff-panel-width: 420px;
+}
+
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ── Drag region for native window ────────────────────────────────────────── */
+.drag-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    -webkit-app-region: drag;
+    z-index: 9999;
+}
+
+/* ── App Layout: 3-panel ──────────────────────────────────────────────────── */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Prevent text selection on UI chrome */
+.sidebar,
+.panel-header,
+.terminal-tabs,
+.diff-status,
+.sidebar-collapsed-bar {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ── Left Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: width 0.15s, min-width 0.15s;
+    position: relative;
+}
+
+.sidebar-branch {
+    border-bottom: none !important;
+}
+
+.sidebar-settings {
+    border-bottom: none !important;
+    padding-top: 4px;
+}
+
+.sidebar-header {
+    padding: 28px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: no-drag;
+}
+
+.sidebar-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+/* ── Repo List ────────────────────────────────────────────────────────────── */
+.repo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.repo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 8px;
+}
+
+.repo-item:hover {
+    background: var(--hover-bg);
+}
+
+.repo-item.active {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--accent);
+    padding-left: 7px;
+}
+
+.repo-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.repo-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.repo-item-path {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.repo-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.repo-item:hover .repo-remove-btn {
+    opacity: 1;
+}
+
+.repo-remove-btn:hover {
+    color: var(--error);
+    background: none;
+}
+
+.empty-repos {
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+/* ── Tool List ────────────────────────────────────────────────────────────── */
+.tool-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: left;
+}
+
+.tool-item:hover {
+    background: var(--hover-bg);
+}
+
+.tool-item.active {
+    background: var(--surface-alt);
+    color: var(--accent);
+}
+
+.tool-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+}
+
+/* ── Sidebar Resize Handle ───────────────────────────────────────────────── */
+.sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    z-index: 10;
+    transition: background 0.15s;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.active {
+    background: var(--accent);
+}
+
+.sidebar.resizing {
+    transition: none;
+}
+
+/* ── Sidebar collapse ────────────────────────────────────────────────────── */
+.sidebar-collapsed-bar {
+    display: none;
+    width: 36px;
+    min-width: 36px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+.sidebar-collapsed-bar:hover {
+    background: var(--hover-bg);
+}
+
+.sidebar-expand-arrow {
+    color: var(--text-secondary);
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.sidebar-collapsed-bar:hover .sidebar-expand-arrow {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+.sidebar.collapsed + .main-content .sidebar-collapsed-bar,
+.sidebar.collapsed ~ .sidebar-collapsed-bar {
+    display: flex;
+}
+
+/* Show collapsed bar when sidebar is collapsed */
+.app-layout.sidebar-collapsed > .sidebar-collapsed-bar {
+    display: flex;
+}
+
+.app-layout.sidebar-collapsed > .sidebar {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+.app-layout.sidebar-collapsed > .sidebar .sidebar-header,
+.app-layout.sidebar-collapsed > .sidebar .sidebar-section,
+.app-layout.sidebar-collapsed > .sidebar .sidebar-spacer,
+.app-layout.sidebar-collapsed > .sidebar .sidebar-shortcut-hint {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.sidebar-spacer {
+    flex: 1;
+}
+
+.sidebar-shortcut-hint {
+    padding: 6px 16px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    text-align: center;
+}
+
+.sidebar-shortcut-hint kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--chip-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+}
+
+/* Branch info */
+.branch-selector {
+    position: relative;
+}
+
+.branch-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    padding: 4px 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.branch-name:hover {
+    background: var(--hover-bg);
+}
+
+.branch-name::after {
+    content: "▾";
+    float: right;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.branch-dropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 200;
+    margin-bottom: 4px;
+}
+
+.branch-dropdown-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    transition: background 0.15s;
+}
+
+.branch-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.branch-dropdown-item:hover {
+    background: var(--hover-bg);
+}
+
+.branch-dropdown-item.current {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ── Main Content ─────────────────────────────────────────────────────────── */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    position: relative;
+}
+
+/* ── Panel Headers ────────────────────────────────────────────────────────── */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    min-height: 40px;
+}
+
+.panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary);
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    -webkit-app-region: no-drag;
+    position: relative;
+    z-index: 10000;
+}
+
+/* ── Terminal Panel ───────────────────────────────────────────────────────── */
+.terminal-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#terminal-container {
+    flex: 1;
+    padding: 4px;
+    background: #0d0d0d;
+    overflow: hidden;
+    position: relative;
+}
+
+.terminal-instance {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* ── Terminal Tabs ────────────────────────────────────────────────────────── */
+.terminal-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    overflow-x: auto;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    -webkit-app-region: no-drag;
+    position: relative;
+    z-index: 10000;
+}
+
+.terminal-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.terminal-tab:hover {
+    background: var(--hover-bg);
+    color: var(--text);
+}
+
+.terminal-tab.active {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.terminal-tab-close {
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.terminal-tab:hover .terminal-tab-close {
+    opacity: 1;
+}
+
+.terminal-tab-close:hover {
+    color: var(--error);
+    background: rgba(248, 113, 113, 0.15);
+}
+
+/* Terminal tab rename input */
+.terminal-tab-rename {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-size: 11px;
+    font-family: var(--sans);
+    padding: 1px 4px;
+    border-radius: 3px;
+    outline: none;
+    width: 100px;
+}
+
+/* ── Tool Overlay ─────────────────────────────────────────────────────────── */
+.tool-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+}
+
+.tool-overlay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    min-height: 40px;
+    -webkit-app-region: no-drag;
+}
+
+.tool-overlay-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* ── Resize Handle ────────────────────────────────────────────────────────── */
+.resize-handle {
+    width: 5px;
+    cursor: col-resize;
+    background: var(--border);
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+    background: var(--accent);
+}
+
+/* ── Right Diff Panel ─────────────────────────────────────────────────────── */
+.diff-panel {
+    width: var(--diff-panel-width);
+    min-width: 200px;
+    max-width: 70vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.diff-status {
+    padding: 8px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre;
+    line-height: 1.6;
+}
+
+.diff-status:empty {
+    display: none;
+}
+
+.diff-status .status-added { color: var(--success); }
+.diff-status .status-modified { color: var(--warning); }
+.diff-status .status-deleted { color: var(--error); }
+.diff-status .status-untracked { color: var(--text-secondary); }
+
+.diff-status .status-file-link {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 -4px;
+    transition: background 0.15s;
+}
+
+.diff-status .status-file-link:hover {
+    background: var(--hover-bg);
+}
+
+.diff-status .status-discard-btn {
+    display: none;
+    cursor: pointer;
+    color: var(--error);
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 6px;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.diff-status .status-file-link:hover .status-discard-btn {
+    display: inline;
+}
+
+.diff-status .status-discard-btn:hover {
+    opacity: 1;
+}
+
+/* Danger button variant */
+.toggle-btn.danger {
+    color: var(--error);
+    border-color: var(--error);
+}
+
+.toggle-btn.danger:hover {
+    background: var(--error);
+    color: var(--text);
+}
+
+/* Highlight animation when scrolling to a diff file */
+.diff-file-highlight {
+    animation: diff-highlight-flash 1.5s ease-out;
+}
+
+@keyframes diff-highlight-flash {
+    0% { outline: 2px solid var(--accent); outline-offset: -2px; }
+    100% { outline: 2px solid transparent; outline-offset: -2px; }
+}
+
+/* ── Diff Context Menu ────────────────────────────────────────────────────── */
+.diff-context-menu {
+    position: fixed;
+    z-index: 99999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 0;
+    min-width: 160px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.diff-context-menu-item {
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.1s;
+}
+
+.diff-context-menu-item:hover {
+    background: var(--hover-bg);
+}
+
+.diff-context-menu-item.danger {
+    color: var(--error);
+}
+
+.diff-context-menu-item.danger:hover {
+    background: var(--error);
+    color: var(--text);
+}
+
+.diff-scroll {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 8px 0;
+}
+
+/* ── Shared Components ────────────────────────────────────────────────────── */
+
+button {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.icon-btn:hover {
+    color: var(--text);
+    background: var(--hover-bg);
+}
+
+.primary-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    width: 100%;
+}
+
+.primary-btn:hover {
+    background: var(--accent-hover);
+}
+
+.primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 0;
+    margin-bottom: 12px;
+}
+
+.back-btn:hover {
+    text-decoration: underline;
+}
+
+.github-btn {
+    display: inline-block;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 8px;
+    transition: all 0.15s;
+}
+
+.github-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.toggle-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+}
+
+.toggle-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.toggle-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.toggle-btn.small {
+    padding: 2px 8px;
+    font-size: 10px;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="date"] {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: var(--sans);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+/* Status */
+.status {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.status.error { color: var(--error); }
+.status.success { color: var(--success); }
+
+/* ── Search Commits Tool Styles ───────────────────────────────────────────── */
+.tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.tool-card > label:first-child {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Quick Filters */
+.quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.quick-filter {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.quick-filter:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.quick-filter.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+/* Date Row */
+.date-row {
+    display: flex;
+    gap: 12px;
+}
+
+.date-field {
+    flex: 1;
+}
+
+.small-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+/* Autocomplete */
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    margin-top: 2px;
+}
+
+.dropdown-item {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: var(--hover-bg);
+}
+
+.dropdown-item strong {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* Chips */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: var(--chip-bg);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+}
+
+.chip button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.chip button:hover {
+    color: var(--error);
+}
+
+/* Commit Results */
+.commit-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+}
+
+.commit-row:hover {
+    border-color: var(--accent);
+    background: var(--hover-bg);
+}
+
+.commit-hash {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.commit-message {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.commit-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Detail */
+.detail-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.detail-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.detail-meta .mono {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+}
+
+.diff-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.diff-container {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+/* Loading & Empty */
+.loading {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ── Collapsible diff files ────────────────────────────────────────────────── */
+.d2h-file-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.d2h-file-header::after {
+    content: "▾";
+    float: right;
+    margin-right: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: transform 0.15s;
+}
+
+.d2h-file-wrapper.collapsed .d2h-file-header::after {
+    content: "▸";
+}
+
+.d2h-file-wrapper.collapsed .d2h-file-diff,
+.d2h-file-wrapper.collapsed .d2h-file-side-diff {
+    display: none;
+}
+
+.d2h-file-wrapper.collapsed .d2h-diff-table {
+    display: none;
+}
+
+/* ── diff2html dark overrides ─────────────────────────────────────────────── */
+
+/* Base wrappers */
+.d2h-wrapper { background: var(--surface) !important; }
+.d2h-file-header {
+    background: var(--chip-bg) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+    height: auto !important;
+    min-height: 35px;
+    padding: 6px 10px !important;
+}
+
+.d2h-file-name-wrapper {
+    min-width: 0 !important;
+    flex-shrink: 1 !important;
+}
+
+.d2h-file-name {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.d2h-file-stats {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+}
+
+.d2h-file-collapse {
+    display: none !important;
+}
+.d2h-file-name { color: var(--text) !important; }
+.d2h-file-list-wrapper { background: var(--surface) !important; border-color: var(--border) !important; }
+.d2h-file-list-wrapper a { color: var(--accent) !important; }
+.d2h-tag { background: var(--chip-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.d2h-tag.d2h-changed { color: var(--warning) !important; }
+.d2h-tag.d2h-added { color: var(--success) !important; }
+.d2h-tag.d2h-deleted { color: var(--error) !important; }
+.d2h-tag.d2h-renamed, .d2h-tag.d2h-moved { color: var(--accent) !important; }
+.d2h-info { background: var(--chip-bg) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+.d2h-file-wrapper { border-color: var(--border) !important; }
+
+/* Default (unchanged) lines — apply to both line number and code cells in the table */
+.d2h-code-linenumber {
+    background: var(--surface) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border) !important;
+}
+.d2h-code-side-linenumber {
+    background: var(--surface) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border) !important;
+}
+.d2h-code-line,
+.d2h-code-side-line {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+}
+.d2h-code-line-ctn {
+    color: var(--text) !important;
+}
+.d2h-file-side-diff { background: var(--surface) !important; }
+.d2h-file-diff { background: var(--surface) !important; }
+
+/* Make diff table rows carry the background so it scrolls with content */
+.d2h-diff-table {
+    border-collapse: collapse !important;
+}
+.d2h-diff-tbody > tr {
+    background: var(--surface) !important;
+}
+
+/* ── Deleted lines (red) — color the table row so it extends full width ──── */
+.d2h-diff-tbody > tr.d2h-del {
+    background-color: rgba(248, 113, 113, 0.12) !important;
+}
+.d2h-del {
+    background-color: rgba(248, 113, 113, 0.12) !important;
+    border-color: rgba(248, 113, 113, 0.15) !important;
+}
+.d2h-del .d2h-code-linenumber,
+.d2h-del .d2h-code-side-linenumber {
+    background-color: rgba(248, 113, 113, 0.2) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(248, 113, 113, 0.15) !important;
+}
+.d2h-del .d2h-code-line,
+.d2h-del .d2h-code-side-line,
+.d2h-del .d2h-code-line-ctn {
+    background-color: rgba(248, 113, 113, 0.12) !important;
+}
+.d2h-code-line del,
+.d2h-code-side-line del {
+    background-color: rgba(248, 113, 113, 0.35) !important;
+    text-decoration: none !important;
+    border-radius: 2px;
+}
+
+/* ── Added lines (green) — color the table row so it extends full width ──── */
+.d2h-diff-tbody > tr.d2h-ins {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+}
+.d2h-ins {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+    border-color: rgba(52, 211, 153, 0.15) !important;
+}
+.d2h-ins .d2h-code-linenumber,
+.d2h-ins .d2h-code-side-linenumber {
+    background-color: rgba(52, 211, 153, 0.2) !important;
+    color: #6ee7b7 !important;
+    border-color: rgba(52, 211, 153, 0.15) !important;
+}
+.d2h-ins .d2h-code-line,
+.d2h-ins .d2h-code-side-line,
+.d2h-ins .d2h-code-line-ctn {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+}
+.d2h-code-line ins,
+.d2h-code-side-line ins {
+    background-color: rgba(52, 211, 153, 0.35) !important;
+    text-decoration: none !important;
+    border-radius: 2px;
+}
+
+/* ── Changed lines ───────────────────────────────────────────────────────── */
+.d2h-file-diff .d2h-del.d2h-change {
+    background-color: rgba(248, 113, 113, 0.12) !important;
+}
+.d2h-file-diff .d2h-ins.d2h-change {
+    background-color: rgba(52, 211, 153, 0.12) !important;
+}
+
+/* Contain line numbers vertically, allow horizontal scroll for long lines */
+.d2h-file-diff,
+.d2h-file-side-diff {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    position: relative !important;
+}
+
+/* ── Preferences ─────────────────────────────────────────────────────────── */
+/* ── Git Reference ────────────────────────────────────────────────────────── */
+.git-ref-intro {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.git-reference .tool-card {
+    margin-bottom: 8px;
+}
+
+.git-cmd {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+}
+
+.git-cmd:last-child {
+    border-bottom: none;
+}
+
+.git-cmd code {
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--surface-alt);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.git-cmd span {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.prefs-description {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.prefs-theme-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.prefs-theme-input-row input {
+    flex: 1;
+}
+
+.prefs-apply-btn {
+    width: auto !important;
+    padding: 8px 20px !important;
+    flex-shrink: 0;
+}
+
+.prefs-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.prefs-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.prefs-swatch-color {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+}
+
+.prefs-swatch-color::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.prefs-swatch-color::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+.prefs-swatch-color:hover {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.prefs-swatch-label {
+    font-size: 9px;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prefs-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Preset themes */
+.preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.preset-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+}
+
+.preset-item:hover {
+    border-color: var(--accent);
+}
+
+.preset-item.active {
+    border-color: var(--accent);
+    background: var(--surface-alt);
+}
+
+.preset-colors {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.preset-color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preset-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
