@@ -1003,12 +1003,14 @@ function cfBackToResults() {
                 layout.classList.add("sidebar-collapsed");
                 sidebar.style.width = "";
                 sidebar.style.minWidth = "";
+                updateDragBarOffset();
             }
         } else {
             layout.classList.remove("sidebar-collapsed");
             const clamped = Math.max(COLLAPSE_THRESHOLD, Math.min(newWidth, window.innerWidth * 0.4));
             sidebar.style.width = clamped + "px";
             sidebar.style.minWidth = clamped + "px";
+            updateDragBarOffset();
         }
 
         const active = getTerminal(activeTerminalId);
@@ -1252,6 +1254,18 @@ cfRenderDiff = function () {
 
 // ── Sidebar Toggle ──────────────────────────────────────────────────────────
 
+function updateDragBarOffset() {
+    const layout = document.querySelector(".app-layout");
+    const dragBar = document.querySelector(".drag-bar");
+    if (!dragBar) return;
+    if (layout.classList.contains("sidebar-collapsed")) {
+        dragBar.style.left = "36px";
+    } else {
+        const sidebar = document.getElementById("sidebar");
+        dragBar.style.left = (sidebar.offsetWidth || 0) + "px";
+    }
+}
+
 function toggleSidebar() {
     const layout = document.querySelector(".app-layout");
     const sidebar = document.getElementById("sidebar");
@@ -1261,6 +1275,7 @@ function toggleSidebar() {
         sidebar.style.width = "";
         sidebar.style.minWidth = "";
     }
+    updateDragBarOffset();
     // Refit active terminal after sidebar animation
     setTimeout(() => {
         const entry = getTerminal(activeTerminalId);
@@ -1787,3 +1802,6 @@ function deleteSnippetFromModal() {
         renderSnippets();
     }
 }
+
+// Initialize drag bar offset to match the expanded sidebar width
+updateDragBarOffset();
