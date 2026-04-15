@@ -1630,3 +1630,171 @@ input[type="date"]:focus {
     display: flex;
     flex-direction: column;
 }
+
+/* ── Pinwheel ──────────────────────────────────────────────────────────────── */
+.pinwheel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000001;
+}
+
+.pinwheel-container {
+    position: relative;
+    width: 460px;
+    height: 460px;
+}
+
+@keyframes pinwheel-item-in {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes pinwheel-center-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.pinwheel-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--surface-alt);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--accent);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pinwheel-center.entering {
+    animation: pinwheel-center-in 0.15s ease both;
+}
+
+.pinwheel-item {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 96px;
+    max-width: 120px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    user-select: none;
+}
+
+.pinwheel-item:not(.empty) {
+    border-color: var(--slot-color);
+}
+
+.pinwheel-item:not(.empty):hover,
+.pinwheel-item:not(.empty).active {
+    background: var(--surface-alt);
+    border-color: var(--slot-color);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--slot-color) 50%, transparent);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.pinwheel-item.empty {
+    opacity: 0.06;
+    border-style: dashed;
+    border-color: var(--border);
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+}
+
+.pinwheel-item-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+}
+
+.pinwheel-item-cmd {
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+    margin-top: 2px;
+}
+
+.pinwheel-hint {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-secondary);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* ── Slot Picker ──────────────────────────────────────────────────────────── */
+.slot-picker {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+}
+
+.slot-picker-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--border);
+    pointer-events: none;
+}
+
+.slot-picker-dot {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--chip-bg);
+    border: 1.5px solid var(--border);
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, transform 0.1s;
+}
+
+.slot-picker-dot:hover {
+    border-color: var(--slot-color);
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+.slot-picker-dot.selected {
+    background: var(--slot-color);
+    border-color: var(--slot-color);
+    transform: translate(-50%, -50%) scale(1.15);
+}
+
+.slot-picker-dot.occupied:not(.selected) {
+    background: var(--slot-color);
+    border-color: var(--slot-color);
+    opacity: 0.6;
+}

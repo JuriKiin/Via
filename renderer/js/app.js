@@ -1362,6 +1362,12 @@ window.via.onShortcut((action) => {
         case "open-repo":
             browseForRepo();
             break;
+        case "open-pinwheel":
+            openPinwheel();
+            break;
+        case "close-pinwheel":
+            closePinwheel();
+            break;
     }
 });
 
@@ -1407,7 +1413,7 @@ const PRESET_THEMES = [
 
 function getCurrentThemeValues() {
     const style = getComputedStyle(document.documentElement);
-    return THEME_KEYS.map((k) => style.getPropertyValue(`--${k} `).trim());
+    return THEME_KEYS.map((k) => style.getPropertyValue(`--${k}`).trim());
 }
 
 function getCurrentThemeString() {
@@ -1418,7 +1424,7 @@ function applyTheme(colors) {
     const root = document.documentElement;
     colors.forEach((color, i) => {
         if (THEME_KEYS[i]) {
-            root.style.setProperty(`--${THEME_KEYS[i]} `, color);
+            root.style.setProperty(`--${THEME_KEYS[i]}`, color);
         }
     });
 
@@ -1454,7 +1460,7 @@ function darkenColor(hex, amount) {
     const r = Math.max(0, Math.round(parseInt(hex.slice(1, 3), 16) * (1 - amount)));
     const g = Math.max(0, Math.round(parseInt(hex.slice(3, 5), 16) * (1 - amount)));
     const b = Math.max(0, Math.round(parseInt(hex.slice(5, 7), 16) * (1 - amount)));
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")} `;
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
 function hexToRgba(hex, alpha) {
@@ -1614,11 +1620,20 @@ function renderSnippets() {
         return;
     }
 
-    list.innerHTML = snippets.map(s => `
+    list.innerHTML = snippets.map(s => {
+        const slotColor = s.pinSlot != null ? SLOT_COLORS[s.pinSlot] : null;
+        const pinDot = slotColor
+            ? `<span title="${SLOT_NAMES[s.pinSlot]} wheel slot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${slotColor};margin-right:5px;flex-shrink:0;"></span>`
+            : '';
+        const nameHtml = s.name
+            ? `<div class="snippet-header"><div class="snippet-name" style="${slotColor ? `color:${slotColor}` : ''}">${pinDot}${escapeHtml(s.name)}</div></div>`
+            : '';
+        const cmdColor = !s.name && slotColor ? `style="color:${slotColor}"` : '';
+        return `
         <div class="snippet-card">
-            ${s.name ? `<div class="snippet-header"><div class="snippet-name">${escapeHtml(s.name)}</div></div>` : ''}
+            ${nameHtml}
             <div class="snippet-command-wrapper">
-                <div class="snippet-command-text">${escapeHtml(s.command)}</div>
+                <div class="snippet-command-text" ${cmdColor}>${!s.name && slotColor ? pinDot : ''}${escapeHtml(s.command)}</div>
                 <div class="snippet-actions">
                     <button class="snippet-icon-btn" onclick="copySnippet('${s.id}')" title="Copy to clipboard">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -1634,7 +1649,7 @@ function renderSnippets() {
                 </div>
             </div>
         </div>
-    `).join("");
+    `}).join("");
 }
 
 function copySnippet(id) {
@@ -1691,10 +1706,25 @@ function runSnippetContext(newTerminal) {
     }
 }
 
+function getCommandVars(command) {
+    const matches = [...command.matchAll(/\{(\w+)\}/g)];
+    return [...new Set(matches.map(m => m[1]))];
+}
+
 function runSnippet(id, newTerminal = false) {
     const snippet = getSnippets().find(s => s.id === id);
     if (!snippet) return;
 
+    const vars = getCommandVars(snippet.command);
+    if (vars.length > 0) {
+        openVarModal(snippet, newTerminal);
+        return;
+    }
+
+    executeSnippet(snippet, snippet.command, newTerminal);
+}
+
+function executeSnippet(snippet, command, newTerminal = false) {
     if (newTerminal) {
         addTerminalTab();
     }
@@ -1707,8 +1737,64 @@ function runSnippet(id, newTerminal = false) {
     // Switch to terminal view to see it run
     openTool('terminal');
 
-    // Send command + Enter
-    window.via.terminalInput(activeTerminalId, snippet.command + "\r");
+    // Send command, optionally followed by Enter
+    const input = snippet.autoRun !== false ? command + "\r" : command;
+    window.via.terminalInput(activeTerminalId, input);
+}
+
+// Variable Prompt Modal
+let _varModalSnippet = null;
+let _varModalNewTerminal = false;
+
+function openVarModal(snippet, newTerminal = false) {
+    _varModalSnippet = snippet;
+    _varModalNewTerminal = newTerminal;
+
+    const vars = getCommandVars(snippet.command);
+    document.getElementById("snippet-var-title").textContent = snippet.name || "Run Snippet";
+    document.getElementById("snippet-var-subtitle").textContent = snippet.command;
+
+    const fields = document.getElementById("snippet-var-fields");
+    fields.innerHTML = vars.map(v => `
+        <div>
+            <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px;">${escapeHtml(v)}</label>
+            <input type="text" id="var-input-${escapeHtml(v)}" data-var="${escapeHtml(v)}"
+                placeholder="${escapeHtml(v)}"
+                style="width:100%; padding:6px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px; font-family:var(--mono);">
+        </div>
+    `).join("");
+
+    document.getElementById("snippet-var-modal").style.display = "flex";
+    // Focus first input
+    const first = fields.querySelector("input");
+    if (first) setTimeout(() => first.focus(), 50);
+
+    // Submit on Enter in any input
+    fields.querySelectorAll("input").forEach(input => {
+        input.addEventListener("keydown", e => {
+            if (e.key === "Enter") submitVarModal();
+            if (e.key === "Escape") closeVarModal();
+        });
+    });
+}
+
+function closeVarModal() {
+    document.getElementById("snippet-var-modal").style.display = "none";
+    _varModalSnippet = null;
+}
+
+function submitVarModal() {
+    if (!_varModalSnippet) return;
+    const snippet = _varModalSnippet;
+    const newTerminal = _varModalNewTerminal;
+    const vars = getCommandVars(snippet.command);
+    let command = snippet.command;
+    for (const v of vars) {
+        const val = document.getElementById(`var-input-${v}`)?.value ?? "";
+        command = command.replaceAll(`{${v}}`, val);
+    }
+    closeVarModal();
+    executeSnippet(snippet, command, newTerminal);
 }
 
 // Edit Modal
@@ -1718,7 +1804,10 @@ function openSnippetModal(id = null) {
     const idInput = document.getElementById("snippet-id-input");
     const nameInput = document.getElementById("snippet-name-input");
     const commandInput = document.getElementById("snippet-command-input");
+    const autoRunInput = document.getElementById("snippet-autorun-input");
     const deleteBtn = document.getElementById("snippet-delete-btn");
+
+    updateSlotPickerOccupancy(id);
 
     if (id) {
         const snippet = getSnippets().find(s => s.id === id);
@@ -1727,13 +1816,21 @@ function openSnippetModal(id = null) {
             idInput.value = snippet.id;
             nameInput.value = snippet.name || "";
             commandInput.value = snippet.command || "";
+            autoRunInput.checked = snippet.autoRun !== false;
             deleteBtn.style.display = "block";
+            if (snippet.pinSlot != null) {
+                selectSnippetSlot(snippet.pinSlot);
+            } else {
+                clearSnippetSlot();
+            }
         }
     } else {
         title.textContent = "New Snippet";
         idInput.value = "";
         nameInput.value = "";
         commandInput.value = "";
+        autoRunInput.checked = true;
+        clearSnippetSlot();
         deleteBtn.style.display = "none";
     }
 
@@ -1755,19 +1852,34 @@ function saveSnippetModal() {
         return;
     }
 
+    const autoRun = document.getElementById("snippet-autorun-input").checked;
+    const slotRaw = document.getElementById("snippet-slot-input").value;
+    const pinSlot = slotRaw !== "" ? parseInt(slotRaw) : null;
+
     const snippets = getSnippets();
+
+    // Clear any other snippet that currently holds this slot
+    if (pinSlot != null) {
+        snippets.forEach(s => {
+            if (s.pinSlot === pinSlot && s.id !== idInput) s.pinSlot = null;
+        });
+    }
+
     if (idInput) {
         const idx = snippets.findIndex(s => s.id === idInput);
         if (idx !== -1) {
             snippets[idx].name = nameInput;
             snippets[idx].command = commandInput;
+            snippets[idx].autoRun = autoRun;
+            snippets[idx].pinSlot = pinSlot;
         }
     } else {
-        // create new
         snippets.push({
             id: 'snippet_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
             name: nameInput,
-            command: commandInput
+            command: commandInput,
+            autoRun: autoRun,
+            pinSlot: pinSlot
         });
     }
 
@@ -1787,3 +1899,203 @@ function deleteSnippetFromModal() {
         renderSnippets();
     }
 }
+
+// ── Slot Picker ────────────────────────────────────────────────────────────
+const SLOT_NAMES = ["Top", "Top Right", "Right", "Bottom Right", "Bottom", "Bottom Left", "Left", "Top Left"];
+const SLOT_COLORS = ["#0ea5e9", "#a855f7", "#34d399", "#fbbf24", "#f87171", "#f97316", "#06b6d4", "#ec4899"];
+const PINWHEEL_SLOTS = 8;
+
+// Positions for each slot dot within the 120x120 picker (center at 60,60, radius 50)
+const SLOT_PICKER_POSITIONS = [
+    { top: 10, left: 60 },
+    { top: 25, left: 95 },
+    { top: 60, left: 110 },
+    { top: 95, left: 95 },
+    { top: 110, left: 60 },
+    { top: 95, left: 25 },
+    { top: 60, left: 10 },
+    { top: 25, left: 25 },
+];
+
+function initSlotPicker() {
+    const picker = document.getElementById("snippet-slot-picker");
+    SLOT_PICKER_POSITIONS.forEach((pos, slot) => {
+        const dot = document.createElement("div");
+        dot.className = "slot-picker-dot";
+        dot.style.top = pos.top + "px";
+        dot.style.left = pos.left + "px";
+        dot.dataset.slot = slot;
+        dot.title = SLOT_NAMES[slot];
+        dot.style.setProperty("--slot-color", SLOT_COLORS[slot]);
+        dot.addEventListener("click", () => {
+            if (dot.classList.contains("occupied")) {
+                const editingId = document.getElementById("snippet-id-input").value;
+                const taken = getSnippets().find(s => s.pinSlot === slot && s.id !== editingId);
+                const takenName = taken ? (taken.name || taken.command) : "another snippet";
+                if (!confirm(`Slot "${SLOT_NAMES[slot]}" is already used by "${takenName}". Reassign it?`)) return;
+            }
+            selectSnippetSlot(slot);
+        });
+        picker.appendChild(dot);
+    });
+}
+
+function selectSnippetSlot(slot) {
+    document.getElementById("snippet-slot-input").value = slot;
+    document.getElementById("snippet-slot-label").textContent = SLOT_NAMES[slot];
+    document.querySelectorAll(".slot-picker-dot").forEach(d => {
+        d.classList.toggle("selected", parseInt(d.dataset.slot) === slot);
+    });
+}
+
+function clearSnippetSlot() {
+    document.getElementById("snippet-slot-input").value = "";
+    document.getElementById("snippet-slot-label").textContent = "No slot selected";
+    document.querySelectorAll(".slot-picker-dot").forEach(d => d.classList.remove("selected"));
+}
+
+function updateSlotPickerOccupancy(editingId = null) {
+    const snippets = getSnippets();
+    document.querySelectorAll(".slot-picker-dot").forEach(dot => {
+        const slot = parseInt(dot.dataset.slot);
+        const occupied = snippets.some(s => s.pinSlot === slot && s.id !== editingId);
+        dot.classList.toggle("occupied", occupied);
+    });
+}
+
+// ── Pinwheel ───────────────────────────────────────────────────────────────
+const PINWHEEL_RADIUS = 200;
+const PINWHEEL_CENTER = 230;
+
+function renderPinwheel() {
+    const container = document.getElementById("pinwheel-container");
+    container.querySelectorAll(".pinwheel-item").forEach(el => el.remove());
+
+    const snippets = getSnippets();
+
+    for (let slot = 0; slot < PINWHEEL_SLOTS; slot++) {
+        const snippet = snippets.find(s => s.pinSlot === slot);
+        const angle = (slot * 45 - 90) * Math.PI / 180;
+        const x = PINWHEEL_CENTER + PINWHEEL_RADIUS * Math.cos(angle);
+        const y = PINWHEEL_CENTER + PINWHEEL_RADIUS * Math.sin(angle);
+
+        const item = document.createElement("div");
+        item.className = "pinwheel-item" + (snippet ? "" : " empty");
+        item.dataset.slot = slot;
+        item.style.left = x + "px";
+        item.style.top = y + "px";
+        item.style.setProperty("--slot-color", SLOT_COLORS[slot]);
+
+        if (snippet) {
+            const label = escapeHtml(snippet.name || snippet.command);
+            const cmd = snippet.command.length > 22
+                ? escapeHtml(snippet.command.slice(0, 22)) + "…"
+                : escapeHtml(snippet.command);
+            item.innerHTML = `
+                <div class="pinwheel-item-name">${label}</div>
+                <div class="pinwheel-item-cmd">${cmd}</div>
+            `;
+            item.addEventListener("mouseup", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePinwheel();
+                runSnippet(snippet.id);
+            });
+        } else {
+            item.innerHTML = `<div class="pinwheel-item-name">${SLOT_NAMES[slot]}</div>`;
+        }
+
+        // Staggered entrance animation
+        item.style.animation = `pinwheel-item-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) ${slot * 25}ms both`;
+
+        container.appendChild(item);
+    }
+}
+
+let _pinwheelActiveSlot = null;
+
+function onPinwheelMouseMove(e) {
+    const container = document.getElementById("pinwheel-container");
+    const rect = container.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 40) {
+        if (_pinwheelActiveSlot !== null) {
+            const prev = document.querySelector(`.pinwheel-item[data-slot="${_pinwheelActiveSlot}"]`);
+            if (prev) prev.classList.remove("active");
+            _pinwheelActiveSlot = null;
+        }
+        return;
+    }
+
+    const angleDeg = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+    const slot = Math.round(angleDeg / 45) % 8;
+
+    if (slot === _pinwheelActiveSlot) return;
+
+    if (_pinwheelActiveSlot !== null) {
+        const prev = document.querySelector(`.pinwheel-item[data-slot="${_pinwheelActiveSlot}"]`);
+        if (prev) prev.classList.remove("active");
+    }
+
+    _pinwheelActiveSlot = slot;
+    const item = document.querySelector(`.pinwheel-item[data-slot="${slot}"]`);
+    if (item && !item.classList.contains("empty")) {
+        item.classList.add("active");
+    }
+}
+
+function openPinwheel() {
+    if (document.getElementById("pinwheel-overlay").style.display !== "none") return;
+    _pinwheelActiveSlot = null;
+    renderPinwheel();
+    const overlay = document.getElementById("pinwheel-overlay");
+    overlay.style.display = "flex";
+    overlay.addEventListener("mousemove", onPinwheelMouseMove);
+    const center = document.getElementById("pinwheel-center");
+    center.classList.remove("entering");
+    void center.offsetWidth;
+    center.classList.add("entering");
+    const removeEntering = () => center.classList.remove("entering");
+    center.addEventListener("animationend", removeEntering, { once: true });
+    setTimeout(removeEntering, 300);
+}
+
+function closePinwheel() {
+    const overlay = document.getElementById("pinwheel-overlay");
+    overlay.style.display = "none";
+    overlay.removeEventListener("mousemove", onPinwheelMouseMove);
+    _pinwheelActiveSlot = null;
+}
+
+
+
+function togglePinwheel() {
+    const overlay = document.getElementById("pinwheel-overlay");
+    if (overlay.style.display === "none") {
+        openPinwheel();
+    } else {
+        closePinwheel();
+    }
+}
+
+function handlePinwheelOverlayClick(e) {
+    if (e.target === document.getElementById("pinwheel-overlay")) {
+        closePinwheel();
+    }
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        const overlay = document.getElementById("pinwheel-overlay");
+        if (overlay && overlay.style.display !== "none") {
+            closePinwheel();
+        }
+    }
+});
+
+initSlotPicker();

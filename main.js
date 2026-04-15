@@ -119,6 +119,15 @@ function createWindow() {
 
   mainWindow.loadFile("renderer/index.html");
 
+  // Show pinwheel while Ctrl is held, hide on release
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown" && input.key === "Control" && !input.meta && !input.alt && !input.shift) {
+      mainWindow.webContents.send("shortcut", "open-pinwheel");
+    } else if (input.type === "keyUp" && input.key === "Control") {
+      mainWindow.webContents.send("shortcut", "close-pinwheel");
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
     killAllPty();
@@ -193,6 +202,11 @@ function buildAppMenu() {
           label: "Search Commits",
           accelerator: "CmdOrCtrl+F",
           click: () => mainWindow?.webContents.send("shortcut", "open-search"),
+        },
+        {
+          label: "Snippet Wheel",
+          accelerator: undefined,
+          click: () => mainWindow?.webContents.send("shortcut", "open-pinwheel"),
         },
         { type: "separator" },
         { role: "reload" },

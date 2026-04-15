@@ -421,8 +421,25 @@
                     <label
                         style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px;">Command
                         <span style="color:var(--error)">*</span></label>
-                    <textarea id="snippet-command-input" rows="4" placeholder="npm run dev"
+                    <textarea id="snippet-command-input" rows="4" placeholder="npm run dev&#10;Use {name} for variables"
                         style="width:100%; padding:6px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px; font-family:var(--mono); resize:vertical;"></textarea>
+                </div>
+                <div class="input-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="snippet-autorun-input" checked style="cursor:pointer;">
+                    <label for="snippet-autorun-input" style="font-size:11px; color:var(--text-secondary); cursor:pointer;">Auto-run (press Enter after pasting)</label>
+                </div>
+                <div class="input-group">
+                    <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:8px;">Pin to Wheel <span style="opacity:0.5;">(tap Ctrl)</span></label>
+                    <div style="display:flex; align-items:center; gap:16px;">
+                        <div class="slot-picker" id="snippet-slot-picker">
+                            <div class="slot-picker-center"></div>
+                        </div>
+                        <div>
+                            <div id="snippet-slot-label" style="font-size:12px; color:var(--text);">No slot selected</div>
+                            <button type="button" onclick="clearSnippetSlot()" style="margin-top:4px; font-size:10px; color:var(--text-secondary); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline;">Clear</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="snippet-slot-input" value="">
                 </div>
             </div>
             <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
@@ -435,6 +452,27 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Snippet Variable Prompt -->
+    <div class="modal-overlay" id="snippet-var-modal" style="display:none;">
+        <div class="modal-content">
+            <h3 id="snippet-var-title" style="margin-bottom:4px; font-size:14px; font-weight:600;">Run Snippet</h3>
+            <p id="snippet-var-subtitle" style="font-size:11px; color:var(--text-secondary); margin-bottom:16px;"></p>
+            <div id="snippet-var-fields" style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;"></div>
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+                <button class="toggle-btn" onclick="closeVarModal()">Cancel</button>
+                <button class="primary-btn" style="width:auto; padding:6px 16px;" onclick="submitVarModal()">Run</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pinwheel Overlay -->
+    <div class="pinwheel-overlay" id="pinwheel-overlay" style="display:none;" onmousedown="handlePinwheelOverlayClick(event)">
+        <div class="pinwheel-container" id="pinwheel-container">
+            <div class="pinwheel-center">◈</div>
+        </div>
+        <span class="pinwheel-hint">Click a snippet to run &nbsp;·&nbsp; Esc to close</span>
     </div>
 
     <script src="js/xterm.js"></script>
