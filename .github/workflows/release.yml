@@ -49,6 +49,10 @@ jobs:
           BRANCH="release/v${{ steps.bump.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clean up stale remote branch from previous failed runs
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
           git checkout -b "$BRANCH"
           git add package.json package-lock.json
           git commit -m "Bump version to ${{ steps.bump.outputs.version }}"
@@ -85,6 +89,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --mac --publish always
+
+      - name: Publish release (remove draft)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "v${{ needs.bump-version.outputs.version }}" --draft=false --latest
 
       - name: Summary
         run: |
