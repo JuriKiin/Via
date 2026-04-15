@@ -284,8 +284,16 @@ function runGit(repoPath, args) {
 function isGitRepo(dirPath) {
   return new Promise((resolve) => {
     const resolved = path.resolve(dirPath);
-    execFile("git", ["-C", resolved, "rev-parse", "--git-dir"], { timeout: 5000 }, (err) => {
-      resolve({ valid: !err, path: resolved });
+    execFile("git", ["-C", resolved, "rev-parse", "--git-dir"], { timeout: 5000 }, (err, stdout) => {
+      if (err) {
+        resolve({ valid: false, path: resolved });
+        return;
+      }
+      const gitDir = stdout.trim();
+      // A linked worktree returns an absolute path ending in .git/worktrees/<name>
+      // A regular repo returns the relative ".git"
+      const isWorktree = path.isAbsolute(gitDir) && gitDir.includes(`${path.sep}worktrees${path.sep}`);
+      resolve({ valid: true, path: resolved, isWorktree });
     });
   });
 }
@@ -313,9 +321,9 @@ ipcMain.handle("pick-directory", async () => {
 // ── IPC: Git operations ──────────────────────────────────────────────────────
 
 ipcMain.handle("validate-repo", async (_e, dirPath) => {
-  const { valid, path: resolved } = await isGitRepo(dirPath);
+  const { valid, path: resolved, isWorktree } = await isGitRepo(dirPath);
   if (valid) {
-    return { valid: true, name: path.basename(resolved), path: resolved };
+    return { valid: true, name: path.basename(resolved), path: resolved, isWorktree: !!isWorktree };
   }
   return { valid: false, error: "Not a git repository" };
 });
@@ -477,6 +485,29 @@ ipcMain.handle("list-branches", async (_e, repoPath) => {
     : [];
 
   return { branches, current };
+});
+
+ipcMain.handle("list-worktrees", async (_e, repoPath) => {
+  const { valid, path: resolved } = await isGitRepo(repoPath);
+  if (!valid) return { worktrees: [] };
+
+  const result = await runGit(resolved, ["worktree", "list", "--porcelain"]);
+  if (result.returncode !== 0) return { worktrees: [] };
+
+  // Each worktree block is separated by a blank line
+  const worktrees = result.stdout.trim().split(/\n\n/).map((block, i) => {
+    const lines = block.trim().split("\n");
+    const wt = { isMain: i === 0 };
+    for (const line of lines) {
+      if (line.startsWith("worktree "))      wt.path = line.slice(9).trim();
+      else if (line.startsWith("branch "))   wt.branch = line.slice(7).trim().replace("refs/heads/", "");
+      else if (line === "bare")              wt.bare = true;
+      else if (line === "detached")          wt.detached = true;
+    }
+    return wt;
+  }).filter(wt => wt.path);
+
+  return { worktrees };
 });
 
 ipcMain.handle("checkout-branch", async (_e, repoPath, branch, forceBringChanges) => {

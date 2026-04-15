@@ -65,13 +65,16 @@ function getSavedRepos() {
     }
 }
 
+// Worktree repos are ephemeral — not persisted across restarts
+let worktreeRepos = [];
+
 function saveRepos(repos) {
     localStorage.setItem("via_repos", JSON.stringify(repos));
 }
 
 function renderSavedRepos() {
     const container = document.getElementById("saved-repos");
-    const repos = getSavedRepos();
+    const repos = [...getSavedRepos(), ...worktreeRepos];
 
     if (repos.length === 0) {
         container.innerHTML = '<p class="empty-repos">No repositories yet</p>';
@@ -83,7 +86,7 @@ function renderSavedRepos() {
             (r) => `
             <div class="repo-item ${r.path === repoPath ? "active" : ""}" onclick="selectRepo('${escapeHtml(r.path)}')" oncontextmenu="showRepoContextMenu(event, '${escapeHtml(r.path)}')">
                 <div class="repo-item-info">
-                    <span class="repo-item-name">${escapeHtml(r.name)}</span>
+                    <span class="repo-item-name">${escapeHtml(r.name)}${r.isWorktree ? '<span class="worktree-badge">worktree</span>' : ''}</span>
                     <span class="repo-item-path">${escapeHtml(r.path)}</span>
                 </div>
                 <button class="repo-remove-btn" onclick="event.stopPropagation(); removeRepo('${escapeHtml(r.path)}')" title="Remove">&times;</button>
@@ -133,10 +136,18 @@ async function browseForRepo() {
 
     const data = await window.via.validateRepo(dirPath);
     if (data.valid) {
-        const repos = getSavedRepos();
-        if (!repos.some((r) => r.path === data.path)) {
-            repos.push({ name: data.name, path: data.path });
-            saveRepos(repos);
+        if (data.isWorktree) {
+            // Worktrees are shown temporarily — not saved to localStorage
+            if (!worktreeRepos.some((r) => r.path === data.path)) {
+                worktreeRepos.push({ name: data.name, path: data.path, isWorktree: true });
+            }
+            renderSavedRepos();
+        } else {
+            const repos = getSavedRepos();
+            if (!repos.some((r) => r.path === data.path)) {
+                repos.push({ name: data.name, path: data.path });
+                saveRepos(repos);
+            }
         }
         selectRepo(data.path);
     } else {
@@ -145,8 +156,14 @@ async function browseForRepo() {
 }
 
 function removeRepo(path) {
-    const repos = getSavedRepos().filter((r) => r.path !== path);
-    saveRepos(repos);
+    // Remove from worktree list if it's a temporary worktree entry
+    const worktreeIdx = worktreeRepos.findIndex((r) => r.path === path);
+    if (worktreeIdx !== -1) {
+        worktreeRepos.splice(worktreeIdx, 1);
+    } else {
+        const repos = getSavedRepos().filter((r) => r.path !== path);
+        saveRepos(repos);
+    }
 
     // Clean up saved terminals for removed repo
     const saved = repoTerminals.get(path);
@@ -1291,9 +1308,19 @@ async function toggleBranchDropdown() {
     dropdown.style.display = "block";
     branchDropdownOpen = true;
 
-    const data = await window.via.listBranches(repoPath);
+    const [data, worktreeData] = await Promise.all([
+        window.via.listBranches(repoPath),
+        window.via.listWorktrees(repoPath),
+    ]);
 
     if (!branchDropdownOpen) return; // closed while loading
+
+    // Map branch name → worktree path for branches checked out elsewhere
+    const worktreeBranchMap = new Map(
+        worktreeData.worktrees
+            .filter(wt => wt.branch && wt.path !== repoPath)
+            .map(wt => [wt.branch, wt])
+    );
 
     if (data.branches.length === 0) {
         dropdown.innerHTML = '<div class="branch-dropdown-item" style="color:var(--text-secondary)">No branches</div>';
@@ -1303,7 +1330,12 @@ async function toggleBranchDropdown() {
     dropdown.innerHTML = data.branches
         .map((b) => {
             const isCurrent = b === data.current ? "current" : "";
-            return `<div class="branch-dropdown-item ${isCurrent}" onclick="selectBranch('${escapeHtml(b)}')">${escapeHtml(b)}${b === data.current ? " (current)" : ""}</div>`;
+            const wt = worktreeBranchMap.get(b);
+            const isWorktree = !!wt;
+            const label = isWorktree
+                ? `${escapeHtml(b)}<span class="branch-worktree-badge">${wt.isMain ? "repo" : "worktree"}</span>`
+                : escapeHtml(b) + (b === data.current ? " (current)" : "");
+            return `<div class="branch-dropdown-item ${isCurrent}${isWorktree ? " is-worktree" : ""}" onclick="selectBranch('${escapeHtml(b)}')">${label}</div>`;
         })
         .join("");
 }
@@ -1312,6 +1344,24 @@ async function selectBranch(branch) {
     const dropdown = document.getElementById("branch-dropdown");
     if (dropdown) dropdown.style.display = "none";
     branchDropdownOpen = false;
+
+    // Check if this branch is already checked out in another worktree or the main repo
+    const worktreeData = await window.via.listWorktrees(repoPath);
+    const occupied = worktreeData.worktrees.find(wt => wt.branch === branch && wt.path !== repoPath);
+
+    if (occupied) {
+        // If it's the main (non-worktree) repo, look for it in saved repos
+        // If it's a linked worktree, open it as a temporary worktree entry
+        const data = await window.via.validateRepo(occupied.path);
+        if (data.valid) {
+            if (data.isWorktree && !worktreeRepos.some(r => r.path === data.path)) {
+                worktreeRepos.push({ name: data.name, path: data.path, isWorktree: true });
+                renderSavedRepos();
+            }
+            selectRepo(data.path);
+        }
+        return;
+    }
 
     let result = await window.via.checkoutBranch(repoPath, branch);
 

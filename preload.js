@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("via", {
   getRemoteUrl: (repoPath) => ipcRenderer.invoke("get-remote-url", repoPath),
   branchDiff: (repoPath) => ipcRenderer.invoke("branch-diff", repoPath),
   listBranches: (repoPath) => ipcRenderer.invoke("list-branches", repoPath),
+  listWorktrees: (repoPath) => ipcRenderer.invoke("list-worktrees", repoPath),
   checkoutBranch: (repoPath, branch, forceBringChanges) => ipcRenderer.invoke("checkout-branch", repoPath, branch, forceBringChanges),
   discardFile: (repoPath, file, statusCode) => ipcRenderer.invoke("discard-file", repoPath, file, statusCode),
   discardAll: (repoPath) => ipcRenderer.invoke("discard-all", repoPath),

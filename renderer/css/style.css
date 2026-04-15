@@ -158,6 +158,21 @@ body {
     text-overflow: ellipsis;
 }
 
+.worktree-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+    opacity: 0.8;
+}
+
 .repo-item-path {
     font-size: 10px;
     font-family: var(--mono);
@@ -412,6 +427,25 @@ body {
 .branch-dropdown-item.current {
     color: var(--accent);
     font-weight: 600;
+}
+
+.branch-dropdown-item.is-worktree {
+    color: var(--text-secondary);
+}
+
+.branch-worktree-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    opacity: 0.7;
 }
 
 /* ── Main Content ─────────────────────────────────────────────────────────── */
