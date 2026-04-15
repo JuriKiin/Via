@@ -1,11 +1,12 @@
 {
   "name": "via",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A lightweight git UI with an embedded terminal",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --mac",
+    "release": "electron-builder --mac --publish always",
     "build:dir": "electron-builder --mac --dir",
     "rebuild-pty": "electron-rebuild -f -w node-pty",
     "postinstall": "bash scripts/patch-electron.sh"
@@ -17,6 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "node-pty": "^1.1.0"
   },
   "devDependencies": {
@@ -27,11 +29,18 @@
   "build": {
     "appId": "com.via.gitui",
     "productName": "Via",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "JuriKiin",
+        "repo": "Via"
+      }
+    ],
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
-        "dir"
+        "zip"
       ],
       "icon": "build/icon.icns"
     },

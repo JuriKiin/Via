@@ -38,6 +38,16 @@ A lightweight git UI with an embedded terminal. Via acts as a bridge for people 
 2. Open the `.dmg` and drag **Via** to your Applications folder
 3. Launch Via from Applications
 
+### macOS Gatekeeper warning
+
+Via is open source and not signed with an Apple Developer certificate, so macOS will block the first launch. To fix this, run the following after installing:
+
+```bash
+xattr -cr /Applications/Via.app
+```
+
+Or: **System Settings > Privacy & Security**, scroll down, and click **Open Anyway** next to the Via warning.
+
 ## Build from Source
 
 Requires [Node.js](https://nodejs.org/) (v18+) and git.

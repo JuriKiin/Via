@@ -31,4 +31,7 @@ contextBridge.exposeInMainWorld("via", {
 
   // Shortcuts from main process menu
   onShortcut: (cb) => ipcRenderer.on("shortcut", (_e, action) => cb(action)),
+
+  // Auto-update
+  onUpdateStatus: (cb) => ipcRenderer.on("update-status", (_e, status) => cb(status)),
 });

@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const os = require("os");
 const { spawn, execFile } = require("child_process");
@@ -12,6 +13,89 @@ const ptyProcesses = new Map(); // id -> ptyProcess
 // File cache: { repoPath: { timestamp, files } }
 const fileCache = {};
 const CACHE_TTL = 60000; // 60s in ms
+
+// ── Auto-updater ────────────────────────────────────────────────────────────
+
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+function setupAutoUpdater() {
+  autoUpdater.on("update-available", (info) => {
+    dialog
+      .showMessageBox(mainWindow, {
+        type: "info",
+        title: "Update Available",
+        message: `A new version (${info.version}) is available. Download it now?`,
+        buttons: ["Download", "Later"],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.downloadUpdate();
+          mainWindow?.webContents.send("update-status", "downloading");
+        }
+      });
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    if (manualUpdateCheck) {
+      dialog.showMessageBox(mainWindow, {
+        type: "info",
+        title: "No Updates",
+        message: "You are running the latest version of Via.",
+      });
+      manualUpdateCheck = false;
+    }
+  });
+
+  autoUpdater.on("update-downloaded", () => {
+    mainWindow?.webContents.send("update-status", "ready");
+    dialog
+      .showMessageBox(mainWindow, {
+        type: "info",
+        title: "Update Ready",
+        message: "Update downloaded. Via will restart to apply the update.",
+        buttons: ["Restart Now", "Later"],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+  });
+
+  autoUpdater.on("error", (err) => {
+    mainWindow?.webContents.send("update-status", "error");
+    if (manualUpdateCheck) {
+      dialog.showMessageBox(mainWindow, {
+        type: "error",
+        title: "Update Error",
+        message: `Failed to check for updates: ${err.message}`,
+      });
+      manualUpdateCheck = false;
+    }
+  });
+}
+
+let manualUpdateCheck = false;
+
+function checkForUpdates(manual = false) {
+  manualUpdateCheck = manual;
+
+  if (!app.isPackaged) {
+    if (manual) {
+      dialog.showMessageBox(mainWindow, {
+        type: "info",
+        title: "Development Mode",
+        message: "Auto-updates are only available in the packaged app. Build Via with 'npm run build' to enable updates.",
+      });
+    }
+    return;
+  }
+
+  autoUpdater.checkForUpdates();
+}
 
 // ── Window ───────────────────────────────────────────────────────────────────
 
@@ -48,6 +132,10 @@ function buildAppMenu() {
       label: "Via",
       submenu: [
         { role: "about" },
+        {
+          label: "Check for Updates...",
+          click: () => checkForUpdates(true),
+        },
         { type: "separator" },
         { role: "services" },
         { type: "separator" },
@@ -150,6 +238,10 @@ app.whenReady().then(() => {
 
   buildAppMenu();
   createWindow();
+  setupAutoUpdater();
+
+  // Check for updates silently on launch (after a short delay)
+  setTimeout(() => checkForUpdates(false), 5000);
 });
 
 app.on("window-all-closed", () => {
