@@ -325,6 +325,29 @@ ipcMain.handle("branch-diff", async (_e, repoPath) => {
 
   const status = statusResult.returncode === 0 ? statusResult.stdout.trim() : "";
 
+  // Generate diffs for untracked files (git diff doesn't include them)
+  if (status) {
+    const untrackedFiles = status
+      .split("\n")
+      .filter((line) => line.startsWith("??"))
+      .map((line) => line.substring(3).trim());
+
+    if (untrackedFiles.length > 0) {
+      const untrackedDiffs = await Promise.all(
+        untrackedFiles.map((file) =>
+          runGit(resolved, ["diff", "--no-index", "--", "/dev/null", file])
+        )
+      );
+      for (const result of untrackedDiffs) {
+        // git diff --no-index exits with 1 when files differ, which is expected
+        if (result.stdout && result.stdout.trim()) {
+          if (diff) diff += "\n";
+          diff += result.stdout;
+        }
+      }
+    }
+  }
+
   const maxSize = 500 * 1024;
   if (diff.length > maxSize) {
     diff = diff.slice(0, maxSize) + "\n\n... diff truncated (exceeded 500KB) ...";
